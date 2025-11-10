@@ -1,0 +1,413 @@
+<!doctype html>
+<html lang="id">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>Your Sweet Choice - EPOS (Local)</title>
+  <style>
+    :root{
+      --bg:#fff7f9; --card:#fff; --accent:#f2b8c6; --accent-2:#f6dde6; --muted:#8b6b76; --shadow: 0 6px 24px rgba(134,80,98,0.08);
+      --glass: rgba(255,255,255,0.75);
+      --success:#6bbf7e;
+    }
+    *{box-sizing:border-box}
+    html,body{height:100%}
+    body{font-family:Inter, system-ui, -apple-system, 'Segoe UI', Roboto, Arial; margin:0; background:linear-gradient(180deg,var(--bg) 0%, #fff 100%); color:#2b2b2b}
+
+    /* Header */
+    header{display:flex; align-items:center; gap:12px; padding:18px 24px; border-bottom:1px solid rgba(0,0,0,0.02);}
+    .brand{display:flex; gap:12px; align-items:center}
+    .logo{width:56px;height:56px;border-radius:12px; display:grid; place-items:center; background:linear-gradient(135deg,var(--accent-2),#fff); box-shadow:var(--shadow);} 
+    .logo h1{margin:0;font-size:14px;color:#a84b63}
+    h1.title{margin:0;font-size:20px}
+    .spacer{flex:1}
+    .btn{background:var(--accent); border:0; padding:8px 12px; border-radius:10px; cursor:pointer}
+    .btn.secondary{background:transparent; border:1px solid rgba(168,75,99,0.12); color:var(--muted)}
+
+    /* Layout */
+    .container{max-width:1100px;margin:22px auto;padding:16px}
+    .grid{display:grid; grid-template-columns:1fr 380px; gap:18px}
+
+    .card{background:var(--card); border-radius:12px; padding:14px; box-shadow:var(--shadow)}
+    h2,h3{margin:0 0 12px 0}
+
+    /* Menu list */
+    .item{display:flex; justify-content:space-between; align-items:center; padding:12px; border-radius:10px}
+    .item + .item{border-top:1px dashed #fdeff3}
+    .meta{display:flex; gap:12px; align-items:center}
+    .item-name{font-weight:700}
+    .price{font-weight:800}
+    input[type=number]{width:72px;padding:8px;border-radius:8px;border:1px solid #f0dfe3}
+
+    /* Cart */
+    .cart-list{max-height:420px; overflow:auto}
+    .cart-row{display:flex; justify-content:space-between; gap:8px; align-items:center; padding:8px 4px}
+    .muted{color:var(--muted)}
+    .totals{display:flex; flex-direction:column; gap:8px; margin-top:12px}
+
+    /* Login / Pages */
+    .page{display:none}
+    .page.active{display:block}
+    .form-row{display:flex; flex-direction:column; gap:6px; margin-bottom:10px}
+    input[type=text], input[type=password], input[type=tel]{padding:8px;border-radius:8px;border:1px solid #f0dfe3}
+
+    /* Receipt print */
+    .receipt{white-space:pre-wrap; font-family:monospace; font-size:13px;}
+
+    /* Responsive */
+    @media (max-width:920px){.grid{grid-template-columns:1fr} .logo{display:none}}
+  </style>
+</head>
+<body>
+  <header>
+    <div class="brand">
+      <div class="logo"><h1>Your<br>Sweet<br>Choice</h1></div>
+      <div>
+        <h1 class="title">Your Sweet Choice — EPOS</h1>
+        <div class="muted">Soft pink pastel theme • Local storage • Seller login</div>
+      </div>
+    </div>
+    <div class="spacer"></div>
+    <div id="seller-area">
+      <button id="go-store" class="btn">Masuk Toko</button>
+      <button id="seller-login-btn" class="btn secondary">Login Penjual</button>
+    </div>
+  </header>
+
+  <main class="container">
+    <!-- Pages: store, seller-login, seller-dashboard -->
+    <div id="page-store" class="page active">
+      <div class="grid">
+        <section>
+          <div class="card">
+            <h2>Daftar Menu</h2>
+
+            <div id="menu-list">
+              <!-- items injected -->
+            </div>
+          </div>
+        </section>
+
+        <aside>
+          <div class="card">
+            <h3>Keranjang</h3>
+            <div class="cart-list" id="cart"></div>
+
+            <div class="totals">
+              <div class="row"><div class="muted">Subtotal</div><div id="subtotal">Rp 0</div></div>
+              <div class="row"><div class="muted">Diskon</div><div id="discount">Rp 0</div></div>
+              <div class="row"><div class="muted">Total</div><div id="total" style="font-weight:800;">Rp 0</div></div>
+              <div style="display:flex; gap:8px; margin-top:8px">
+                <button id="clear" class="btn secondary">Bersihkan</button>
+                <button id="checkout" class="btn">Bayar</button>
+              </div>
+            </div>
+          </div>
+
+          <div style="height:12px"></div>
+          <div class="card">
+            <h4>Struk (Preview)</h4>
+            <div id="receipt" class="receipt" style="max-height:260px; overflow:auto; padding:8px; border-radius:8px; background:linear-gradient(180deg,#fff,#fffafc)"></div>
+            <div style="display:flex; gap:8px; margin-top:8px">
+              <button id="print" class="btn secondary">Cetak Struk</button>
+              <button id="save-json" class="btn secondary">Simpan JSON</button>
+            </div>
+          </div>
+        </aside>
+      </div>
+    </div>
+
+    <div id="page-seller-login" class="page">
+      <div class="card" style="max-width:520px;margin:0 auto">
+        <h2>Login / Registrasi Penjual</h2>
+        <div class="form-row">
+          <label>Username</label>
+          <input id="login-username" type="text" placeholder="username">
+        </div>
+        <div class="form-row">
+          <label>Password</label>
+          <input id="login-password" type="password" placeholder="password">
+        </div>
+        <div style="display:flex; gap:8px">
+          <button id="btn-login" class="btn">Login</button>
+          <button id="btn-register" class="btn secondary">Registrasi</button>
+          <button id="btn-back-store" class="btn secondary">Kembali</button>
+        </div>
+        <p class="muted" style="margin-top:10px">Catatan: data akun tersimpan hanya di browser ini (localStorage).</p>
+      </div>
+    </div>
+
+    <div id="page-seller-dashboard" class="page">
+      <div class="card">
+        <div style="display:flex; justify-content:space-between; align-items:center">
+          <h2>Dashboard Penjual</h2>
+          <div>
+            <button id="btn-export-all" class="btn">Ekspor Semua Transaksi</button>
+            <button id="btn-logout" class="btn secondary">Logout</button>
+          </div>
+        </div>
+        <div style="margin-top:12px">
+          <h3>Daftar Transaksi Tersimpan</h3>
+          <div id="tx-list"></div>
+        </div>
+      </div>
+    </div>
+
+  </main>
+
+  <footer style="max-width:1100px;margin:18px auto;padding:12px;color:var(--muted);font-size:13px">Your Sweet Choice • EPOS lokal • Tema soft pink pastel • Transaksi disimpan di LocalStorage</footer>
+
+  <script>
+    // --- Data setup ---
+    const MENU = [
+      {sku:'orig-4', name:'Cookies Original (isi 4)', price:20000},
+      {sku:'orig-7', name:'Cookies Original (isi 7)', price:30000},
+      {sku:'matcha-4', name:'Cookies Matcha (isi 4)', price:25000},
+      {sku:'matcha-7', name:'Cookies Matcha (isi 7)', price:35000},
+      {sku:'rv-4', name:'Cookies Red Velvet (isi 4)', price:25000},
+      {sku:'rv-7', name:'Cookies Red Velvet (isi 7)', price:35000},
+      {sku:'choco-1', name:'Cookies Chocolate (1 pcs)', price:5000}
+    ];
+
+    // Helpers
+    const q = s=>document.querySelector(s);
+    const qa = s=>Array.from(document.querySelectorAll(s));
+    const fmt = n=> 'Rp ' + String(n).replace(/\B(?=(\d{3})+(?!\d))/g, '.');
+
+    // LocalStorage keys
+    const LS_USERS = 'ysc_users';
+    const LS_TX = 'ysc_transactions';
+
+    // state
+    const state = {items:{}};
+
+    // --- Render menu ---
+    const menuList = q('#menu-list');
+    MENU.forEach(it=>{
+      const div = document.createElement('div'); div.className='item';
+      div.innerHTML = `
+        <div class="meta">
+          <div>
+            <div class="item-name">${it.name}</div>
+            <div class="muted">SKU: ${it.sku}</div>
+          </div>
+        </div>
+        <div style="display:flex;align-items:center;gap:8px">
+          <div class="price">${fmt(it.price)}</div>
+          <input type="number" min="1" value="1" data-sku="${it.sku}" aria-label="qty-${it.sku}">
+          <button data-sku="${it.sku}" class="btn add">Tambah</button>
+        </div>
+      `;
+      menuList.appendChild(div);
+    });
+
+    // add handlers
+    qa('.add').forEach(btn=> btn.addEventListener('click', ()=>{
+      const sku = btn.dataset.sku;
+      const input = q(`input[data-sku="${sku}"]`);
+      const qty = Number(input.value) || 1;
+      const item = MENU.find(m=>m.sku===sku);
+      addToCart(item.sku,item.name,item.price,qty);
+    }));
+
+    function addToCart(sku,name,price,qty){
+      if (!state.items[sku]) state.items[sku]={sku,name,price,qty:0};
+      state.items[sku].qty += Number(qty);
+      if (state.items[sku].qty <=0) delete state.items[sku];
+      renderCart();
+    }
+
+    function removeFromCart(sku){ delete state.items[sku]; renderCart(); }
+    function changeQty(sku,qty){ if (!state.items[sku]) return; state.items[sku].qty = Number(qty); if (state.items[sku].qty<=0) removeFromCart(sku); renderCart(); }
+
+    function computeTotals(){
+      let sub = 0; for (const k in state.items) sub += state.items[k].price * state.items[k].qty;
+      let discount = 0; if (sub >= 200000) discount = 10000;
+      return {sub,discount,total: sub - discount};
+    }
+
+    function renderCart(){
+      const cartEl = q('#cart'); cartEl.innerHTML='';
+      for (const k in state.items){
+        const it = state.items[k];
+        const row = document.createElement('div'); row.className='cart-row';
+        row.innerHTML = `
+          <div style="flex:1">
+            <div style="font-weight:700">${it.name}</div>
+            <div class="muted">${it.qty} × ${fmt(it.price)} = ${fmt(it.qty*it.price)}</div>
+          </div>
+          <div style="display:flex;align-items:center;gap:8px">
+            <input class="cart-qty" type="number" min="1" value="${it.qty}" data-sku="${k}" style="width:64px">
+            <button data-remove="${k}" class="btn secondary">Hapus</button>
+          </div>
+        `;
+        cartEl.appendChild(row);
+      }
+      qa('.cart-qty').forEach(inp=> inp.addEventListener('change', e=> changeQty(inp.dataset.sku, inp.value)));
+      qa('button[data-remove]').forEach(b=> b.addEventListener('click', ()=> removeFromCart(b.dataset.remove)));
+
+      const t = computeTotals(); q('#subtotal').textContent = fmt(t.sub); q('#discount').textContent = fmt(t.discount); q('#total').textContent = fmt(t.total);
+      renderReceipt();
+    }
+
+    function renderReceipt(extra){
+      const now = new Date(); let out = '';
+      out += 'YOUR SWEET CHOICE\n';
+      out += 'Jl. Contoh No.1 • Toko Cookies\n';
+      out += '--------------------------------\n';
+      out += now.toLocaleString('id-ID') + '\n\n';
+      for (const k in state.items){ const it = state.items[k]; out += `${it.name}\n  ${it.qty} × ${fmt(it.price)} = ${fmt(it.qty*it.price)}\n`; }
+      const t = computeTotals(); out += '\n'; out += `Subtotal: ${fmt(t.sub)}\n`;
+      out += `Diskon: ${fmt(t.discount)}\n`;
+      out += `TOTAL: ${fmt(t.total)}\n`;
+      if (extra){ out += `Tunai: ${fmt(extra.paid)}\nKembali: ${fmt(extra.change)}\n`; }
+      out += '--------------------------------\n';
+      out += 'Terima kasih telah berbelanja!\n';
+      q('#receipt').textContent = out;
+    }
+
+    // clear
+    q('#clear').addEventListener('click', ()=>{ state.items={}; renderCart(); });
+
+    // checkout
+    q('#checkout').addEventListener('click', ()=>{
+      const totals = computeTotals(); if (totals.total <= 0){ alert('Keranjang kosong'); return; }
+      const buyer = prompt('Nama pembeli (opsional) — biarkan kosong jika tidak perlu:', '');
+      const input = prompt(`Total ${fmt(totals.total)}. Masukkan jumlah tunai (tanpa titik):`, String(totals.total));
+      if (input === null) return; const paid = Number(String(input).replace(/[^0-9]/g,''));
+      if (isNaN(paid) || paid < totals.total){ alert('Pembayaran tidak cukup'); return; }
+      const change = paid - totals.total;
+
+      // build transaction
+      const tx = {id: 'tx-'+Date.now(), timestamp: new Date().toISOString(), buyer: buyer||'Tamu', items: JSON.parse(JSON.stringify(state.items)), totals: totals, paid: paid, change: change};
+
+      // save to localStorage
+      const all = JSON.parse(localStorage.getItem(LS_TX) || '[]'); all.push(tx); localStorage.setItem(LS_TX, JSON.stringify(all));
+
+      // show receipt with paid info
+      renderReceipt({paid,change});
+      alert('Pembayaran berhasil — struk dibuat dan transaksi disimpan lokal.');
+
+      // reset cart
+      state.items = {}; renderCart();
+    });
+
+    // print
+    q('#print').addEventListener('click', ()=>{
+      const w = window.open('','_blank','width=400,height=600');
+      w.document.write(`<pre style="font-family:monospace; white-space:pre-wrap">${q('#receipt').textContent}</pre>`);
+      w.document.close();
+      w.print();
+    });
+
+    // save json single transaction preview
+    q('#save-json').addEventListener('click', ()=>{
+      const payload = {timestamp: new Date().toISOString(), items: state.items, totals: computeTotals()};
+      const blob = new Blob([JSON.stringify(payload,null,2)], {type:'application/json'});
+      const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = 'transaction-'+Date.now()+'.json'; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // --- Seller auth (local) ---
+    function loadUsers(){ return JSON.parse(localStorage.getItem(LS_USERS) || '[]'); }
+    function saveUsers(u){ localStorage.setItem(LS_USERS, JSON.stringify(u)); }
+    function hashPass(p){ // very simple hash (not secure) just to avoid plain text -- for local demo only
+      let h=0; for (let i=0;i<p.length;i++){ h = (h<<5)-h + p.charCodeAt(i); h |= 0; } return String(h);
+    }
+
+    q('#seller-login-btn').addEventListener('click', ()=> showPage('page-seller-login'));
+    q('#btn-back-store').addEventListener('click', ()=> showPage('page-store'));
+    q('#go-store').addEventListener('click', ()=> showPage('page-store'));
+
+    q('#btn-register').addEventListener('click', ()=>{
+      const u = q('#login-username').value.trim(); const p = q('#login-password').value;
+      if (!u || !p){ alert('Isi username & password'); return; }
+      const users = loadUsers(); if (users.find(x=>x.username===u)){ alert('Username sudah terpakai'); return; }
+      users.push({username:u, password: hashPass(p)}); saveUsers(users); alert('Registrasi berhasil — silakan login');
+    });
+
+    q('#btn-login').addEventListener('click', ()=>{
+      const u = q('#login-username').value.trim(); const p = q('#login-password').value;
+      if (!u || !p){ alert('Isi username & password'); return; }
+      const users = loadUsers(); const found = users.find(x=>x.username===u && x.password===hashPass(p));
+      if (!found){ alert('Username atau password salah'); return; }
+      // login success
+      localStorage.setItem('ysc_session', JSON.stringify({username:u, at: new Date().toISOString()}));
+      showSellerDashboard();
+      showPage('page-seller-dashboard');
+    });
+
+    q('#btn-logout').addEventListener('click', ()=>{ localStorage.removeItem('ysc_session'); alert('Logout berhasil'); showPage('page-store'); });
+
+    // seller dashboard
+    function showSellerDashboard(){
+      const all = JSON.parse(localStorage.getItem(LS_TX) || '[]');
+      const list = q('#tx-list'); list.innerHTML='';
+      if (all.length===0) list.innerHTML = '<div class="muted">Belum ada transaksi tersimpan</div>';
+      all.slice().reverse().forEach(tx=>{
+        const d = document.createElement('div'); d.className='card'; d.style.marginBottom='8px';
+        d.innerHTML = `
+          <div style="display:flex;justify-content:space-between;align-items:center">
+            <div>
+              <div style="font-weight:700">${tx.id}</div>
+              <div class="muted">${new Date(tx.timestamp).toLocaleString('id-ID')} • ${tx.buyer || 'Tamu'}</div>
+            </div>
+            <div style="display:flex; gap:8px; align-items:center">
+              <button class="btn view" data-id="${tx.id}">Lihat</button>
+              <button class="btn secondary export" data-id="${tx.id}">Ekspor</button>
+              <button class="btn secondary delete" data-id="${tx.id}">Hapus</button>
+            </div>
+          </div>
+        `;
+        list.appendChild(d);
+      });
+
+      // wire buttons
+      qa('button.view').forEach(b=> b.addEventListener('click', ()=>{
+        const id = b.dataset.id; const all = JSON.parse(localStorage.getItem(LS_TX) || '[]'); const tx = all.find(x=>x.id===id);
+        if (!tx) return alert('Tidak ditemukan');
+        // show in print window
+        const txt = buildReceiptFromTx(tx);
+        const w = window.open('','_blank','width=420,height=600'); w.document.write(`<pre style="font-family:monospace; white-space:pre-wrap">${txt}</pre>`); w.document.close();
+      }));
+
+      qa('button.export').forEach(b=> b.addEventListener('click', ()=>{
+        const id = b.dataset.id; const all = JSON.parse(localStorage.getItem(LS_TX) || '[]'); const tx = all.find(x=>x.id===id);
+        if (!tx) return alert('Tidak ditemukan');
+        const blob = new Blob([JSON.stringify(tx,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `${tx.id}.json`; a.click(); URL.revokeObjectURL(url);
+      }));
+
+      qa('button.delete').forEach(b=> b.addEventListener('click', ()=>{
+        if (!confirm('Hapus transaksi ini?')) return; const id = b.dataset.id; let all = JSON.parse(localStorage.getItem(LS_TX) || '[]'); all = all.filter(x=>x.id!==id); localStorage.setItem(LS_TX, JSON.stringify(all)); showSellerDashboard();
+      }));
+    }
+
+    function buildReceiptFromTx(tx){
+      let out = ''; out += 'YOUR SWEET CHOICE\n'; out += 'Jl. Contoh No.1 • Toko Cookies\n'; out += '--------------------------------\n'; out += new Date(tx.timestamp).toLocaleString('id-ID') + '\n\n';
+      for (const k in tx.items){ const it = tx.items[k]; out += `${it.name}\n  ${it.qty} × ${fmt(it.price)} = ${fmt(it.qty*it.price)}\n`; }
+      out += '\n'; out += `Subtotal: ${fmt(tx.totals.sub)}\n`;
+      out += `Diskon: ${fmt(tx.totals.discount)}\n`;
+      out += `TOTAL: ${fmt(tx.totals.total)}\n`;
+      out += `Tunai: ${fmt(tx.paid)}\nKembali: ${fmt(tx.change)}\n`;
+      out += '--------------------------------\n'; out += `Pembeli: ${tx.buyer || 'Tamu'}\n`;
+      out += 'Terima kasih sudah berbelanja!\n';
+      return out;
+    }
+
+    q('#btn-export-all').addEventListener('click', ()=>{
+      const all = JSON.parse(localStorage.getItem(LS_TX) || '[]'); if (all.length===0) return alert('Belum ada transaksi');
+      const blob = new Blob([JSON.stringify(all,null,2)], {type:'application/json'}); const url = URL.createObjectURL(blob); const a = document.createElement('a'); a.href = url; a.download = `transactions-${Date.now()}.json`; a.click(); URL.revokeObjectURL(url);
+    });
+
+    // routing pages
+    function showPage(id){ qa('.page').forEach(p=> p.classList.remove('active')); q('#'+id).classList.add('active'); window.scrollTo(0,0); }
+
+    // on load, check session
+    window.addEventListener('load', ()=>{
+      const sess = JSON.parse(localStorage.getItem('ysc_session') || 'null');
+      if (sess) { showPage('page-seller-dashboard'); showSellerDashboard(); }
+      renderCart();
+    });
+
+  </script>
+</body>
+</html>
